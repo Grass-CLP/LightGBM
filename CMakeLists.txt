@@ -109,6 +109,7 @@ include_directories(${EIGEN_DIR})
 
 # See https://gitlab.com/libeigen/eigen/-/blob/master/COPYING.README
 add_definitions(-DEIGEN_MPL2_ONLY)
+add_definitions(-DEIGEN_DONT_PARALLELIZE)
 
 if(__BUILD_FOR_R)
     find_package(LibR REQUIRED)
@@ -324,6 +325,18 @@ if(WIN32 AND MINGW)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++")
 endif()
 
+# Check if inet_pton is already available, to avoid conflicts with the implementation in LightGBM.
+# As of 2022, MinGW started including a definition of inet_pton.
+if(WIN32)
+  include(CheckSymbolExists)
+  list(APPEND CMAKE_REQUIRED_LIBRARIES "ws2_32")
+  check_symbol_exists(inet_pton "ws2tcpip.h" WIN_INET_PTON_FOUND)
+  if(WIN_INET_PTON_FOUND)
+    add_definitions(-DWIN_HAS_INET_PTON)
+  endif()
+  list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES "ws2_32")
+endif()
+
 if(MSVC)
     set(
       variables
@@ -383,6 +396,8 @@ if(USE_CUDA OR USE_CUDA_EXP)
       src/treelearner/*.cu
 endif()
 if(USE_CUDA_EXP)
+      src/boosting/cuda/*.cpp
+      src/boosting/cuda/*.cu
       src/treelearner/cuda/*.cpp
       src/treelearner/cuda/*.cu
       src/io/cuda/*.cu

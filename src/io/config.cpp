@@ -164,18 +164,18 @@ void Config::GetAucMuWeights() {
   } else {
     auc_mu_weights_matrix = std::vector<std::vector<double>> (num_class, std::vector<double>(num_class, 0));
     if (auc_mu_weights.size() != static_cast<size_t>(num_class * num_class)) {
-      Log::Fatal("auc_mu_weights must have %d elements, but found %d", num_class * num_class, auc_mu_weights.size());
+      Log::Fatal("auc_mu_weights must have %d elements, but found %zu", num_class * num_class, auc_mu_weights.size());
     }
     for (size_t i = 0; i < static_cast<size_t>(num_class); ++i) {
       for (size_t j = 0; j < static_cast<size_t>(num_class); ++j) {
         if (i == j) {
           auc_mu_weights_matrix[i][j] = 0;
           if (std::fabs(auc_mu_weights[i * num_class + j]) > kZeroThreshold) {
-            Log::Info("AUC-mu matrix must have zeros on diagonal. Overwriting value in position %d of auc_mu_weights with 0.", i * num_class + j);
+            Log::Info("AUC-mu matrix must have zeros on diagonal. Overwriting value in position %zu of auc_mu_weights with 0.", i * num_class + j);
           }
         } else {
           if (std::fabs(auc_mu_weights[i * num_class + j]) < kZeroThreshold) {
-            Log::Fatal("AUC-mu matrix must have non-zero values for non-diagonal entries. Found zero value in position %d of auc_mu_weights.", i * num_class + j);
+            Log::Fatal("AUC-mu matrix must have non-zero values for non-diagonal entries. Found zero value in position %zu of auc_mu_weights.", i * num_class + j);
           }
           auc_mu_weights_matrix[i][j] = auc_mu_weights[i * num_class + j];
         }
@@ -408,6 +408,31 @@ std::string Config::ToString() const {
   str_buf << "[tree_learner: " << tree_learner << "]\n";
   str_buf << "[device_type: " << device_type << "]\n";
   str_buf << SaveMembersToString();
+  return str_buf.str();
+}
+
+const std::string Config::DumpAliases() {
+  auto map = Config::parameter2aliases();
+  for (auto& pair : map) {
+    std::sort(pair.second.begin(), pair.second.end(), SortAlias);
+  }
+  std::stringstream str_buf;
+  str_buf << "{\n";
+  bool first = true;
+  for (const auto& pair : map) {
+    if (first) {
+      str_buf << "   \"";
+      first = false;
+    } else {
+      str_buf << "   , \"";
+    }
+    str_buf << pair.first << "\": [";
+    if (pair.second.size() > 0) {
+      str_buf << "\"" << CommonC::Join(pair.second, "\", \"") << "\"";
+    }
+    str_buf << "]\n";
+  }
+  str_buf << "}\n";
   return str_buf.str();
 }
 
